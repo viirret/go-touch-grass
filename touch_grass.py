@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+
 class TimeTracker:
     def __init__(self, username):
         self.username = username
@@ -46,7 +47,7 @@ class TimeTracker:
             raise ValueError("Discord webhook URL not found in .env file")
 
         self.data_file = Path(state_file)
-        self.state = self.load_state() or { 'running': False }
+        self.state = self.load_state() or {'running': False}
 
         # Check for existing running session.
         if self.state.get('running', False):
@@ -78,7 +79,7 @@ class TimeTracker:
                     state = json.load(f)
                     if not isinstance(state, dict):
                         return {'running': False}
-                    
+
                     # Convert string timestamps to numbers.
                     if 'session_start' in state:
                         state['session_start'] = float(state['session_start'])
@@ -90,7 +91,7 @@ class TimeTracker:
         except Exception as e:
             logger.error(f"Error loading state file: {e}")
             return {'running': False}
-        
+
     def save_state(self):
         """Save current state to a file."""
         try:
@@ -143,32 +144,31 @@ class TimeTracker:
         if not self.state.get('last_shutdown'):
             logger.info("No previous shutdown detected")
             return
-            
+
         offline_duration = time.time() - self.state['last_shutdown']
         duration_str = self.format_duration(offline_duration)
         message = f"{self.username} touched grass for: {duration_str}."
         self.send_to_discord(message)
         logger.info(message)
 
-
     def format_duration(self, seconds):
         """Format seconds into human-readable time."""
         duration = timedelta(seconds=seconds)
         parts = []
-        
+
         if duration.days > 0:
             parts.append(f"{duration.days} day{'s' if duration.days != 1 else ''}")
-        
+
         hours, remainder = divmod(duration.seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        
+
         if hours > 0:
             parts.append(f"{hours} hour{'s' if hours != 1 else ''}")
         if minutes > 0:
             parts.append(f"{minutes} minute{'s' if minutes != 1 else ''}")
         if seconds > 0 or not parts:
             parts.append(f"{seconds} second{'s' if seconds != 1 else ''}")
-        
+
         return ' '.join(parts)
 
     def send_to_discord(self, message):
@@ -221,7 +221,8 @@ class TimeTracker:
                         requests.get(url, timeout=5)
                         logger.info(f"Network connection established (reached {url})")
                         return True
-                    except:
+                    except Exception as e:
+                        logger.debug(f"Failed to reach {url}: {e}")
                         continue
 
                 # If all URLs failed
@@ -242,7 +243,7 @@ class TimeTracker:
             logger.info("Starting offline, will retry operations when network is available.")
 
         self.report_offline_time()
-        
+
         # Keep running until shutdown.
         try:
             while True:
@@ -251,6 +252,7 @@ class TimeTracker:
             logger.error(f"Main loop error: {e}")
             self.handle_shutdown()
             sys.exit(1)
+
 
 def main():
     parser = argparse.ArgumentParser(description='Time tracking tool that reports to Discord on shutdown.')
@@ -262,6 +264,7 @@ def main():
     print("The tracker will run in the background and report when the system shuts down.")
 
     tracker.run()
+
 
 if __name__ == "__main__":
     main()
