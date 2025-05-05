@@ -1,20 +1,18 @@
 import os
 import time
 import json
-import requests
 import atexit
-from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
-import argparse
 import signal
 import sys
 import logging
+import requests
+from datetime import timedelta
 from pathlib import Path
 
 xdg_state_home = Path(os.getenv('XDG_STATE_HOME', Path.home() / '.local' / 'state'))
 xdg_cache_home = Path(os.getenv('XDG_CACHE_HOME', Path.home() / '.cache'))
 
-# Create application directories
+# Create application directories.
 app_state_dir = xdg_state_home / 'go_touch_grass'
 app_cache_dir = xdg_cache_home / 'go_touch_grass'
 
@@ -36,18 +34,13 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-
 
 class TimeTracker:
     def __init__(self, username):
         self.username = username
-        self.webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
-        if not self.webhook_url:
-            raise ValueError("Discord webhook URL not found in .env file")
-
         self.data_file = Path(state_file)
         self.state = self.load_state() or {'running': False}
+        self.output_handlers = []
 
         # Check for existing running session.
         if self.state.get('running', False):
@@ -70,6 +63,13 @@ class TimeTracker:
         }
         self.save_state()
         logger.info("New tracking session started.")
+
+    def add_output_handler(self, handler):
+        """Add an output handler for sending messages."""
+        if hasattr(handler, 'send'):
+            self.output_handlers.append(handler)
+        else:
+            raise ValueError("Handler must have a 'send' method.")
 
     def load_state(self):
         """Load tracking state from file."""
@@ -125,16 +125,11 @@ class TimeTracker:
             })
             self.save_state()
 
-            # Send discord message.
+            # Send message to all output handlers.
             duration_str = self.format_duration(online_duration)
-            message = f"{self.username} was online for {duration_str}."
-            try:
-                if self.send_to_discord(message):
-                    logger.info(f"Session ended. Duration: {duration_str}")
-                else:
-                    logger.error("Failed to send message to Discord.")
-            except Exception as e:
-                logger.error(f"Discord send error: {e}")
+            message = f"{self.username} was online for: {duration_str}."
+            self.send_to_outputs(message)
+            logger.info(f"Session ended. Duration: {duration_str}")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
             raise
@@ -148,7 +143,7 @@ class TimeTracker:
         offline_duration = time.time() - self.state['last_shutdown']
         duration_str = self.format_duration(offline_duration)
         message = f"{self.username} touched grass for: {duration_str}."
-        self.send_to_discord(message)
+        self.send_to_outputs(message)
         logger.info(message)
 
     def format_duration(self, seconds):
@@ -171,37 +166,13 @@ class TimeTracker:
 
         return ' '.join(parts)
 
-    def send_to_discord(self, message):
-        """Send message to Discord webhook."""
-        data = {
-            "username": "Go Touch Grass!",
-            "embeds": [{
-                "title": "️Grass Touching Update",
-                "description": message,
-                "color": 0x3498db,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "footer": {
-                    "text": "Automated computer usage tracker"
-                },
-                "author": {
-                    "name": "github.com/viirret/go-touch-grass",
-                    "url": "https://github.com/viirret/go-touch-grass",
-                    "icon_url": "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
-                }
-            }]
-        }
-
-        try:
-            response = requests.post(
-                self.webhook_url,
-                json=data,
-                timeout=10
-            )
-            response.raise_for_status()
-            return True
-        except Exception as e:
-            logger.error(f"Failed to send to Discord: {e}")
-            return False
+    def send_to_outputs(self, message):
+        """Send message to all output handlers."""
+        for handler in self.output_handlers:
+            try:
+                handler.send(message)
+            except Exception as e:
+                logger.error(f"Error sending to output handler: {handler.__class__.__name__}: {e}")
 
     def wait_for_network(self, timeout=300, check_interval=10):
         """Wait for network connection to be available"""
@@ -211,7 +182,7 @@ class TimeTracker:
         test_urls = [
             'https://1.1.1.1',  # Cloudflare DNS
             'https://8.8.8.8',  # Google DNS
-            'https://discord.com'  # Our actual target
+            "https://example.com",  # Example URL
         ]
 
         while time.time() - start_time < timeout:
@@ -252,19 +223,3 @@ class TimeTracker:
             logger.error(f"Main loop error: {e}")
             self.handle_shutdown()
             sys.exit(1)
-
-
-def main():
-    parser = argparse.ArgumentParser(description='Time tracking tool that reports to Discord on shutdown.')
-    parser.add_argument('--username', required=True, help='Username to include in the Discord message')
-    args = parser.parse_args()
-
-    tracker = TimeTracker(args.username)
-    print(f"Time tracking started for user: {args.username}")
-    print("The tracker will run in the background and report when the system shuts down.")
-
-    tracker.run()
-
-
-if __name__ == "__main__":
-    main()
