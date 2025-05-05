@@ -9,9 +9,11 @@ git clone https://github.com/viirret/go-touch-grass.git
 cd go-touch-grass
 ```
 
-2. Install dependencies.
+2. Install dependencies
 ```bash
-pip install -r requirements.txt
+python -m venv venv
+source venv/bin/activate
+pip install .
 ```
 
 3. Create the `.env` file:
@@ -23,7 +25,7 @@ echo 'DISCORD_WEBHOOK_URL="your_webhook_url_here"' > .env
 
 ### Basic Run
 ```bash
-python time_tracker.py --username "YourName"
+python src/scripts/discord_cli.py --username "YourName"
 ```
 
 ### Systemd Service
@@ -39,7 +41,7 @@ RefuseManualStop=no
 Type=simple
 User=yourusername
 WorkingDirectory=/path/to/go-touch-grass
-ExecStart=/usr/bin/python /path/to/go-touch-grass/touch_grass.py --username "YourName"
+ExecStart=/path/to/go-touch-grass/venv/bin/python -m scripts.discord_cli --username "YourName"
 TimeoutStopSec=30
 KillMode=control-group
 Restart=no
@@ -74,10 +76,9 @@ Custom Paths:
 Set XDG_STATE_HOME or XDG_CACHE_HOME environment variables to override defaults.
 
 ## Dependencies
-- See [requirements.txt](requirements.txt)
+- See [pyproject.toml](pyproject.toml)
 
 ## TODO
-- Other outputs than discord
 - Tests
 
 ## Contributing
