@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "go_touch_grass"
+version = "0.0.1"
+dependencies = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0"
+]
+requires-python = ">=3.9"
+authors = [
+    {name = "Valtteri Viirret", email = "viirretvaltteri@gmail.com"}
+]
+description = "Computer online/offline tracker"
+readme = "README.md"
+licence = "MIT"
+license-files = ["LICENSE"]
+
+[project.urls]
+Repository = "https://github.com/viirret/go-touch-grass.git"
+
+[project.scripts]
+go-touch-grass-discord = "go_touch_grass.scripts.discord_cli:main"
