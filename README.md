@@ -25,7 +25,7 @@ echo 'DISCORD_WEBHOOK_URL="your_webhook_url_here"' > .env
 
 ### Basic Run
 ```bash
-python src/scripts/discord_cli.py --username "YourName"
+./venv/bin/go-touch-grass --username "YourName" --discord
 ```
 
 ### Systemd Service
@@ -40,13 +40,12 @@ RefuseManualStop=no
 [Service]
 Type=simple
 User=yourusername
-WorkingDirectory=/path/to/go-touch-grass
-ExecStart=/path/to/go-touch-grass/venv/bin/python -m scripts.discord_cli --username "YourName"
 TimeoutStopSec=30
+ExecStart=/path/to/go-touch-grass/venv/bin/go-touch-grass --username "YourName" --discord
 KillMode=control-group
 Restart=no
 RemainAfterExit=yes
-Environment="DISCORD_WEBHOOK_URL=your_webhook_url"
+EnvironmentFile="/path/to/go-touch-grass/.env"
 
 [Install]
 WantedBy=default.target
