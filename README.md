@@ -77,8 +77,5 @@ Set XDG_STATE_HOME or XDG_CACHE_HOME environment variables to override defaults.
 ## Dependencies
 - See [pyproject.toml](pyproject.toml)
 
-## TODO
-- Tests
-
 ## Contributing
 Via Pull Request.

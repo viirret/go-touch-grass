@@ -110,7 +110,6 @@ class TimeTracker:
         """Save shutdown time and calculate session duration."""
         try:
             if not self.state.get('running', False):
-                logger.info("No active session to save.")
                 return
 
             # Calculate duration.
@@ -129,7 +128,6 @@ class TimeTracker:
             duration_str = self.format_duration(online_duration)
             message = f"{self.username} was online for: {duration_str}."
             self.send_to_outputs(message)
-            logger.info(f"Session ended. Duration: {duration_str}")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
             raise

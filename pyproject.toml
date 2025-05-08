@@ -18,6 +18,13 @@ readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 
+[project.optional-dependencies]
+test = [
+    "pytest==7.4.0",
+    "pytest-mock==3.11.1",
+    "requests-mock==1.11.0"
+]
+
 [project.urls]
 Repository = "https://github.com/viirret/go-touch-grass.git"
 
