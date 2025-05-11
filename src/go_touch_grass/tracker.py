@@ -1,4 +1,3 @@
-import os
 import time
 import json
 import atexit
@@ -9,25 +8,16 @@ import requests
 from datetime import timedelta
 from pathlib import Path
 
-xdg_state_home = Path(os.getenv('XDG_STATE_HOME', Path.home() / '.local' / 'state'))
-xdg_cache_home = Path(os.getenv('XDG_CACHE_HOME', Path.home() / '.cache'))
+from go_touch_grass.config import STATE_FILE, LOG_FILE, ensure_dirs_exist
+from go_touch_grass.database import Db
 
-# Create application directories.
-app_state_dir = xdg_state_home / 'go_touch_grass'
-app_cache_dir = xdg_cache_home / 'go_touch_grass'
-
-app_state_dir.mkdir(parents=True, exist_ok=True)
-app_cache_dir.mkdir(parents=True, exist_ok=True)
-
-# File paths
-state_file = app_state_dir / 'state.json'
-log_file = app_cache_dir / 'log.log'
+ensure_dirs_exist()
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(log_file),
+        logging.FileHandler(LOG_FILE),
         logging.StreamHandler()
     ]
 )
@@ -38,9 +28,10 @@ logger = logging.getLogger(__name__)
 class TimeTracker:
     def __init__(self, username):
         self.username = username
-        self.data_file = Path(state_file)
+        self.data_file = Path(STATE_FILE)
         self.state = self.load_state() or {'running': False}
         self.output_handlers = []
+        self.db = Db()
 
         # Check for existing running session.
         if self.state.get('running', False):
@@ -116,6 +107,15 @@ class TimeTracker:
             end_time = time.time()
             online_duration = end_time - self.state['session_start']
 
+            # Save to database and check if it's a new record.
+            is_new_record = self.db.save_session(
+                username=self.username,
+                session_type='online',
+                start_time=self.state['session_start'],
+                end_time=end_time,
+                duration=online_duration
+            )
+
             # Save state.
             self.state.update({
                 'last_online_duration': online_duration,
@@ -127,6 +127,8 @@ class TimeTracker:
             # Send message to all output handlers.
             duration_str = self.format_duration(online_duration)
             message = f"{self.username} was online for: {duration_str}."
+            if is_new_record:
+                message += " New record!"
             self.send_to_outputs(message)
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
@@ -138,9 +140,23 @@ class TimeTracker:
             logger.info("No previous shutdown detected")
             return
 
-        offline_duration = time.time() - self.state['last_shutdown']
+        start_time = self.state['last_shutdown']
+        end_time = time.time()
+        offline_duration = end_time - start_time
+
+        # Save to database and check if it's a new record.
+        is_new_record = self.db.save_session(
+            username=self.username,
+            session_type='offline',
+            start_time=start_time,
+            end_time=end_time,
+            duration=offline_duration
+        )
+
         duration_str = self.format_duration(offline_duration)
         message = f"{self.username} touched grass for: {duration_str}."
+        if is_new_record:
+            message += " New record!"
         self.send_to_outputs(message)
         logger.info(message)
 
