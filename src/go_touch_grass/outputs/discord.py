@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import requests
 from datetime import datetime, timezone
@@ -9,13 +11,13 @@ load_dotenv()
 
 
 class DiscordOutput:
-    def __init__(self, username):
-        self.username = username
-        self.webhook_url = os.getenv('DISCORD_WEBHOOK_URL')
+    def __init__(self, username: str) -> None:
+        self.username: str = username
+        self.webhook_url: str | None = os.getenv('DISCORD_WEBHOOK_URL')
         if not self.webhook_url:
             raise ValueError("Discord webhook URL not found in .env file")
 
-    def send(self, message):
+    def send(self, message: str) -> bool:
         """Send a message to the Discord webhook."""
         data = {
             "username": "Go Touch Grass!",

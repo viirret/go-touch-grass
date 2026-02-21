@@ -1,14 +1,19 @@
+from __future__ import annotations
+
 import sqlite3
+from pathlib import Path
+from typing import Any
+
 from go_touch_grass.config import DB_FILE, ensure_dirs_exist
 
 
 class Db:
-    def __init__(self, db_path=None):
+    def __init__(self, db_path: Path | str | None = None) -> None:
         ensure_dirs_exist()
-        self.db_path = db_path if db_path else DB_FILE
+        self.db_path: Path | str = db_path if db_path else DB_FILE
         self._init_db()
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         """Initialize the database with required tables."""
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -26,7 +31,7 @@ class Db:
             ''')
             conn.commit()
 
-    def save_session(self, username, session_type, start_time, end_time, duration):
+    def save_session(self, username: str, session_type: str, start_time: float, end_time: float, duration: float) -> bool:
         """
         Save a session to the database.
 
@@ -63,7 +68,7 @@ class Db:
 
             return is_record
 
-    def get_stats(self, username):
+    def get_stats(self, username: str) -> dict[str, dict[str, Any]]:
         """
         Get usage statistics for a specific user.
 

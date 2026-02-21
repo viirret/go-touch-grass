@@ -1,36 +1,39 @@
+from __future__ import annotations
+
 import json
 import pytest
 import time
+from pathlib import Path
+from pytest_mock import MockerFixture
 from go_touch_grass.tracker import TimeTracker
 
 
 @pytest.fixture
-def tracker_env(tmp_path, monkeypatch):
+def tracker_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     """Fixture that sets up the complete tracking environment"""
     state_dir = tmp_path / "state"
     state_dir.mkdir()
     state_file = state_dir / "state.json"
 
     monkeypatch.setenv('XDG_STATE_HOME', str(tmp_path))
-    monkeypatch.setattr('go_touch_grass.tracker.app_state_dir', state_dir)
-    monkeypatch.setattr('go_touch_grass.tracker.state_file', state_file)
+    monkeypatch.setattr('go_touch_grass.tracker.STATE_FILE', state_file)
 
     return {'state_dir': state_dir, 'state_file': state_file}
 
 
 @pytest.fixture
-def tracker(tracker_env):
+def tracker(tracker_env: dict[str, Path]) -> TimeTracker:
     tracker_env['state_file'].unlink(missing_ok=True)
     return TimeTracker(username="test_user")
 
 
 @pytest.fixture
-def state_file(tmp_path):
+def state_file(tmp_path: Path) -> Path:
     """Helper fixture to get the state file path"""
     return tmp_path / "state" / "state.json"
 
 
-def test_tracker_initialization(tracker, tracker_env):
+def test_tracker_initialization(tracker: TimeTracker, tracker_env: dict[str, Path]) -> None:
     state_file = tracker_env['state_file']
 
     assert tracker.username == "test_user"
@@ -49,7 +52,7 @@ def test_tracker_initialization(tracker, tracker_env):
         assert isinstance(data['session_start'], float)
 
 
-def test_shutdown_handling(tracker, tracker_env, mocker):
+def test_shutdown_handling(tracker: TimeTracker, tracker_env: dict[str, Path], mocker: MockerFixture) -> None:
     state_file = tracker_env['state_file']
     mock_output = mocker.MagicMock()
 
@@ -65,14 +68,14 @@ def test_shutdown_handling(tracker, tracker_env, mocker):
     assert mock_output.send.call_count == 1
 
 
-def test_format_duration():
+def test_format_duration() -> None:
     tracker = TimeTracker(username="test_user")
     assert tracker.format_duration(65) == "1 minute 5 seconds"
     assert tracker.format_duration(3600) == "1 hour"
     assert tracker.format_duration(86400) == "1 day"
 
 
-def test_network_wait(mocker):
+def test_network_wait(mocker: MockerFixture) -> None:
     tracker = TimeTracker(username="test_user")
     mock_get = mocker.patch('requests.get')
     mock_get.side_effect = [Exception(), Exception(), True]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import time
 import json
 import atexit
@@ -7,6 +9,8 @@ import logging
 import requests
 from datetime import timedelta
 from pathlib import Path
+from types import FrameType
+from typing import Any
 
 from go_touch_grass.config import STATE_FILE, LOG_FILE, ensure_dirs_exist
 from go_touch_grass.database import Db
@@ -26,12 +30,12 @@ logger = logging.getLogger(__name__)
 
 
 class TimeTracker:
-    def __init__(self, username):
-        self.username = username
-        self.data_file = Path(STATE_FILE)
-        self.state = self.load_state() or {'running': False}
-        self.output_handlers = []
-        self.db = Db()
+    def __init__(self, username: str) -> None:
+        self.username: str = username
+        self.data_file: Path = Path(STATE_FILE)
+        self.state: dict[str, Any] = self.load_state() or {'running': False}
+        self.output_handlers: list[Any] = []
+        self.db: Db = Db()
 
         # Check for existing running session.
         if self.state.get('running', False):
@@ -55,14 +59,14 @@ class TimeTracker:
         self.save_state()
         logger.info("New tracking session started.")
 
-    def add_output_handler(self, handler):
+    def add_output_handler(self, handler: Any) -> None:
         """Add an output handler for sending messages."""
         if hasattr(handler, 'send'):
             self.output_handlers.append(handler)
         else:
             raise ValueError("Handler must have a 'send' method.")
 
-    def load_state(self):
+    def load_state(self) -> dict[str, Any] | None:
         """Load tracking state from file."""
         try:
             if self.data_file.exists():
@@ -83,7 +87,7 @@ class TimeTracker:
             logger.error(f"Error loading state file: {e}")
             return {'running': False}
 
-    def save_state(self):
+    def save_state(self) -> None:
         """Save current state to a file."""
         try:
             with open(self.data_file, 'w') as f:
@@ -91,13 +95,13 @@ class TimeTracker:
         except Exception as e:
             logger.error(f"Error saving state: {e}")
 
-    def handle_shutdown(self, signum=None, frame=None):
+    def handle_shutdown(self, signum: int | None = None, frame: FrameType | None = None) -> None:
         """Handle termination signals."""
         logger.info(f"Received shutdown signal: {signum}")
         self.on_shutdown()
         sys.exit(0)
 
-    def on_shutdown(self):
+    def on_shutdown(self) -> None:
         """Save shutdown time and calculate session duration."""
         try:
             if not self.state.get('running', False):
@@ -134,7 +138,7 @@ class TimeTracker:
             logger.error(f"Error during shutdown: {e}")
             raise
 
-    def report_offline_time(self):
+    def report_offline_time(self) -> None:
         """Report how long computer was offline (touching grass time)"""
         if not self.state.get('last_shutdown'):
             logger.info("No previous shutdown detected")
@@ -160,7 +164,7 @@ class TimeTracker:
         self.send_to_outputs(message)
         logger.info(message)
 
-    def format_duration(self, seconds):
+    def format_duration(self, seconds: float) -> str:
         """Format seconds into human-readable time."""
         duration = timedelta(seconds=seconds)
         parts = []
@@ -180,7 +184,7 @@ class TimeTracker:
 
         return ' '.join(parts)
 
-    def send_to_outputs(self, message):
+    def send_to_outputs(self, message: str) -> None:
         """Send message to all output handlers."""
         for handler in self.output_handlers:
             try:
@@ -188,7 +192,7 @@ class TimeTracker:
             except Exception as e:
                 logger.error(f"Error sending to output handler: {handler.__class__.__name__}: {e}")
 
-    def wait_for_network(self, timeout=300, check_interval=10):
+    def wait_for_network(self, timeout: int = 300, check_interval: int = 10) -> bool:
         """Wait for network connection to be available"""
         start_time = time.time()
         logger.info("Waiting for network connection...")
@@ -221,7 +225,7 @@ class TimeTracker:
         logger.error("Network connection timeout exceeded")
         return False
 
-    def run(self):
+    def run(self) -> None:
         """Main tracking loop"""
         # Wait for network connection before starting.
         if not self.wait_for_network():

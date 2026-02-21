@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 import pytest
+from pytest_mock import MockerFixture
 from go_touch_grass.outputs.discord import DiscordOutput
 
 
 @pytest.fixture
-def discord_output(monkeypatch):
+def discord_output(monkeypatch: pytest.MonkeyPatch) -> DiscordOutput:
     monkeypatch.setenv('DISCORD_WEBHOOK_URL', 'https://example.com/webhook')
     return DiscordOutput(username="test_user")
 
 
-def test_discord_send_success(discord_output, mocker):
+def test_discord_send_success(discord_output: DiscordOutput, mocker: MockerFixture) -> None:
     mock_post = mocker.patch('requests.post')
     mock_post.return_value.status_code = 204
 
@@ -16,7 +19,7 @@ def test_discord_send_success(discord_output, mocker):
     mock_post.assert_called_once()
 
 
-def test_discord_send_failure(discord_output, mocker):
+def test_discord_send_failure(discord_output: DiscordOutput, mocker: MockerFixture) -> None:
     mock_post = mocker.patch('requests.post')
     mock_post.side_effect = Exception("Test error")
 
